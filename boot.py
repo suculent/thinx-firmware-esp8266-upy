@@ -5,45 +5,12 @@
 
 # Note: platformio uses .py files as custom scripts so we cannot simply match for .py to decide the project is micropython-based!
 
-# --- beginning of machine-generated header
-
-#
-# This is an auto-generated stub, it will be pre-pended by THiNX on cloud build.
-#
-
-# build-time constants
-THINX_COMMIT_ID="micropython-test"
-THINX_FIRMWARE_VERSION_SHORT = "0.9.3"
-THINX_FIRMWARE_VERSION = "thinx-firmware-upy-0.9.3"
-THINX_UDID=None
-
-# dynamic variables (adjustable by user but overridden from API)
-THINX_CLOUD_URL="thinx.cloud" # can change to proxy (?)
-THINX_MQTT_URL="thinx.cloud" # should try thinx.local first for proxy
-THINX_API_KEY=None # "88eb20839c1d8bf43819818b75a25cef3244c28e77817386b7b73b043193cef4" # will change in future to support rolling api-keys
-THINX_DEVICE_ALIAS="micropython-test"
-THINX_DEVICE_OWNER="eaabae0d5165c5db4c46c3cb6f062938802f58d9b88a1b46ed69421809f0bf7f"
-THINX_AUTO_UPDATE=True
-THINX_PROXY="thinx.local"
-
-THINX_MQTT_PORT = 1883
-THINX_API_PORT = 7442
-
-THINX_ENV_SSID = 'THiNX-IoT'
-THINX_ENV_PASS = '<enter-your-ssid-password>'
-
-# --- end of machine-generated code
 
 # THiNX Example device application
 
 # Roadmap:
 # TODO: HTTPS proxy support
 # TODO: convert to thinx class
-
-# Required parameters without captive portal
-SSID = THINX_ENV_SSID
-PASSWORD = THINX_ENV_PASS
-TIMEOUT = 180
 
 import urequests
 import ubinascii
@@ -58,6 +25,37 @@ from network import WLAN
 from mqtt import MQTTClient
 import machine
 import time
+
+try:
+    settings = ujson.loads('thinx.json')
+
+    # Load globals from list
+    THINX_COMMIT_ID                 = settings['THINX_COMMIT_ID']
+    THINX_FIRMWARE_VERSION_SHORT    = settings['THINX_FIRMWARE_VERSION_SHORT']
+    THINX_FIRMWARE_VERSION          = settings['THINX_FIRMWARE_VERSION']
+    THINX_UDID                      = settings['THINX_UDID']
+    THINX_CLOUD_URL                 = settings['THINX_CLOUD_URL']
+    THINX_MQTT_URL                  = settings['THINX_MQTT_URL']
+    THINX_API_KEY                   = settings['THINX_API_KEY']
+    THINX_DEVICE_ALIAS              = settings['THINX_DEVICE_ALIAS']
+    THINX_DEVICE_OWNER              = settings['THINX_DEVICE_OWNER']
+    THINX_AUTO_UPDATE               = settings['THINX_AUTO_UPDATE']
+    THINX_PROXY                     = settings['THINX_PROXY']
+    THINX_MQTT_PORT                 = settings['THINX_MQTT_PORT']
+    THINX_API_PORT                  = settings['THINX_API_PORT']
+    THINX_ENV_SSID                  = settings['THINX_ENV_SSID']
+    THINX_ENV_PASS                  = settings['THINX_ENV_PASS']
+
+    if THINX_ENV_SSID==None or THINX_ENV_PASS=None:
+        print("THiNX: THINX_ENV_SSID and THINX_ENV_PASS must be set for headless devices without captive portal / AP mode!")
+
+except Exception:
+    print("THINX: JSON configuration did not load.")
+
+# Required parameters without captive portal
+SSID = THINX_ENV_SSID
+PASSWORD = THINX_ENV_PASS
+TIMEOUT = 180
 
 #class THiNXException(Exception):
 #    pass
