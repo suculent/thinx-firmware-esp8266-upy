@@ -1,0 +1,19 @@
+micropython:
+  platform: esp8266
+  modules:
+    - _boot.py
+    - apa102.py
+    - boot.py
+    - dht.py
+    - ds18x20.py
+    - flashbdev.py
+    - inisetup.py
+    - neopixel.py
+    - ntptime.py
+    - onewire.py
+    - port_diag.py
+    - upip.py
+    - upip_utarfile.py
+    - webrepl.py
+    - webrepl_setup.py
+    - websocket_helper.py
