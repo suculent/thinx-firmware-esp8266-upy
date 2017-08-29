@@ -1,16 +1,8 @@
-# --- DEVELOPER NOTES ---
-
-# In case of Micropython and LUA-based firmwares, there's always main file to
-# be executed. Builder will write our static variables to beginning of that file.
-
-# Note: platformio uses .py files as custom scripts so we cannot simply match for .py to decide the project is micropython-based!
-
-
 # THiNX Example device application
 
 # Roadmap:
 # TODO: HTTPS proxy support
-# TODO: convert to thinx class
+# TODO: Micropython class
 
 import urequests
 import ubinascii
@@ -28,8 +20,6 @@ import time
 
 try:
     settings = ujson.loads('thinx.json')
-
-    # Load globals from list
     THINX_COMMIT_ID                 = settings['THINX_COMMIT_ID']
     THINX_FIRMWARE_VERSION_SHORT    = settings['THINX_FIRMWARE_VERSION_SHORT']
     THINX_FIRMWARE_VERSION          = settings['THINX_FIRMWARE_VERSION']
@@ -45,40 +35,17 @@ try:
     THINX_API_PORT                  = settings['THINX_API_PORT']
     THINX_ENV_SSID                  = settings['THINX_ENV_SSID']
     THINX_ENV_PASS                  = settings['THINX_ENV_PASS']
-
-    if THINX_ENV_SSID==None or THINX_ENV_PASS=None:
-        print("THiNX: THINX_ENV_SSID and THINX_ENV_PASS must be set for headless devices without captive portal / AP mode!")
-
 except Exception:
     print("THINX: JSON configuration did not load.")
+    if THINX_ENV_SSID==None:
+        print("THiNX: THINX_ENV_SSID and THINX_ENV_PASS must be set for headless devices without captive portal / AP mode!")
+    if THINX_ENV_PASS==None:
+        print("THiNX: THINX_ENV_SSID and THINX_ENV_PASS must be set for headless devices without captive portal / AP mode!")
 
 # Required parameters without captive portal
 SSID = THINX_ENV_SSID
 PASSWORD = THINX_ENV_PASS
 TIMEOUT = 180
-
-#class THiNXException(Exception):
-#    pass
-
-#class THiNXClient:
-
-#    def __init__(self, api_key):
-#        self.api_key = api_key
-
-#        self.THINX_COMMIT_ID=THINX_COMMIT_ID
-#        self.THINX_FIRMWARE_VERSION_SHORT=THINX_FIRMWARE_VERSION_SHORT
-#        self.THINX_FIRMWARE_VERSION=THINX_FIRMWARE_VERSION
-#        self.THINX_UDID=THINX_UDID
-#        self.THINX_CLOUD_URL=THINX_CLOUD_URL
-#        self.THINX_MQTT_URL=THINX_MQTT_URL
-#        self.THINX_API_KEY=THINX_API_KEY
-#        self.THINX_DEVICE_ALIAS=THINX_DEVICE_ALIAS
-#        self.THINX_DEVICE_OWNER=THINX_DEVICE_OWNER
-#        self.THINX_AUTO_UPDATE=THINX_AUTO_UPDATE
-#        self.THINX_PROXY=THINX_PROXY
-#        self.THINX_MQTT_PORT=THINX_MQTT_PORT
-#        self.THINX_API_PORT=THINX_API_PORT
-#        ... to be done later...
 
 mqtt_client = None
 mqtt_connected = False
@@ -103,22 +70,14 @@ def mqtt_device_channel():
 
 def mqtt_status_channel():
     return mqtt_device_channel() + "/status"
-#
-# CONNECTION
-#
 
+# CONNECTION
 KEEPALIVE = 120
 CLEANSESSION = False # set falst to keep retained messages
-
-# LWT has default QoS but is retained
 MQTT_LWT_QOS = 0
 MQTT_LWT_RETAIN = 1
-
-# default MQTT QoS can lose messages
 MQTT_QOS = 0
 MQTT_RETAIN = 1
-
-# device channel has QoS 2 and msut keep retained messages until device gets reconnected
 MQTT_DEVICE_QOS = 2 # do not loose anything, require confirmation... (may not be supported)
 
 def connect(ssid, password):
@@ -126,6 +85,7 @@ def connect(ssid, password):
     ap_if = network.WLAN(network.AP_IF)
     if ap_if.active():
         ap_if.active(False)
+
     if not sta_if.isconnected():
         print('THiNX: Connecting to WiFi...')
         sta_if.active(True)
@@ -139,7 +99,6 @@ def connect(ssid, password):
 
     print('THiNX: Network configuration:', sta_if.ifconfig())
 
-# Example step 1: registration (device check-in)
 def thinx_register():
     print('THiNX: Device registration...')
     url = 'http://thinx.cloud:7442/device/register' # register/check-in device
@@ -169,7 +128,6 @@ def thinx_register():
 
     resp.close()
 
-# Example step 2: device update
 def thinx_update(data):
     url = 'http://thinx.cloud:7442/device/firmware'
     headers = {'Authentication': THINX_API_KEY,
@@ -187,9 +145,7 @@ def thinx_update(data):
 
     data = ujson.dumps(update_request)
     print(data)
-
     resp = urequests.post(url, data=data, headers=headers)
-
     if resp:
         print("THiNX: Server replied...")
         print(resp.json())
@@ -199,14 +155,8 @@ def thinx_update(data):
 
     resp.close()
 
-#
 # RESPONSE PARSER
-#
-
 def parse(response):
-
-    # Check 'success'
-
     try:
         success = response['success']
         print("THINX: Parsing success response:")
@@ -228,10 +178,7 @@ def parse(response):
     else:
         thinx_mqtt()
 
-#
 # DEVICE INFO
-#
-
 # provides only current status as JSON so it can be loaded/saved independently
 def get_device_info():
     json_object = {'alias': THINX_DEVICE_ALIAS,
@@ -270,10 +217,7 @@ def restore_device_info():
     else:
         print("THINX: No config file found")
 
-#
 # MQTT
-#
-
 def mqtt_publish(channel, message):
     if mqtt_client!=None:
         mqtt_client.publish(channel, message)
@@ -282,15 +226,11 @@ def thinx_mqtt_timeout():
     mqtt_connected=False
 
 def thinx_mqtt():
-
     restore_device_info()
-
     if not THINX_API_KEY:
         print("* THiNX: MQTT init failed...")
         return
-
     print("* THiNX: Initializing MQTT client " + THINX_UDID + " / " + THINX_API_KEY)
-
     mqtt_client = MQTTClient(thinx_device_mac(), THINX_MQTT_URL, THINX_MQTT_PORT, THINX_DEVICE_OWNER, THINX_API_KEY, keepalive=0,
                  ssl=False, ssl_params={})
     mqtt_client.settimeout = thinx_mqtt_timeout
@@ -319,21 +259,18 @@ def process_mqtt(response):
     print(response)
     try:
         json = ujson.loads(response)
-
         try:
             upd = json['update']
             if upd:
                 update_and_reboot(upd)
         except Exception:
             pass
-
         try:
             msg = json['message']
             if msg:
                 parse(json)
         except Exception:
             pass
-
     except Exception:
         print("* THiNX: Processing MQTT payload failed: " + response)
 
@@ -391,9 +328,7 @@ def parse_registration(response):
 
         try:
             status = reg['status']
-
             if success=="OK":
-
                 try:
                     THINX_DEVICE_OWNER = reg['owner']
                     print("THINX: Overriding owner from API: " + THINX_DEVICE_OWNER)
@@ -419,16 +354,12 @@ def parse_registration(response):
                     pass
 
                 save_device_info()
-
-                # Check current firmware based on commit id and store Updated state...
                 commit = reg['commit']
                 print("commit: " + commit)
-
-                # Check current firmware based on version and store Updated state...
                 version = reg['version']
                 print("version: " + version)
 
-                if commit==THINX_COMMIT_ID and version==THINX_FIRMWARE_VERSION:
+                if ((commit==THINX_COMMIT_ID) and (version==THINX_FIRMWARE_VERSION)):
                     print("*TH: firmware has same commit_id as current and update availability is stored. Firmware has been installed.")
                     available_update_url = None
                     save_device_info()
@@ -518,12 +449,8 @@ def send_update_question():
     else:
         print("send_update_question: Device updated but MQTT not active to notify. TODO: Store.")
 
-#
 # UPDATES
-#
-
 # -- the update payload may contain files, URL or OTT
-
 def update_file(name, data):
     file = open(name, 'w')
     if file!=False:
@@ -533,10 +460,8 @@ def update_file(name, data):
     else:
         return False
 
-
 # TODO: def update_from_url(name, url)
 def update_from_url(name, url):
-
     headers = {'Authentication': THINX_API_KEY,
                'Accept': 'application/json',
                'Origin': 'device',
@@ -553,8 +478,6 @@ def update_from_url(name, url):
         print("* THiNX: Update from URL failed...")
 
 def update_and_reboot(payload):
-
-
     # initial implementation, TODO: DANGER! FIXME!
     #if update_file('thinx.py', response):
     #    if mqtt_client!=None:
@@ -563,7 +486,6 @@ def update_and_reboot(payload):
     #else:
     #    print("THINX: failed to update thinx.py.")
 
-    # update variants
     try:
         files = payload['files']
     except Exception:
@@ -588,9 +510,6 @@ def update_and_reboot(payload):
 
     if files:
         uos.rename('thinx.py', 'thinx.bak')
-# only on success
-# uos.rename('thinx.py', 'thinx.bak')
-# uos.rename('thinx.new', 'thinx.py')
         success = False
         for file in files:
             try:
@@ -615,7 +534,6 @@ def update_and_reboot(payload):
     else:
         print("* THiNX: MQTT Update payload is missing file descriptors.")
 
-
     if ott:
         if type=="file":
             print("* THiNX: Updating " + name + " from URL " + url)
@@ -633,27 +551,21 @@ def update_and_reboot(payload):
         uos.rename("thinx.bak", "thinx.lua")
         print("* THiNX: Update aborted.")
 
-#
 # CORE LOOP
-#
-
 def thinx():
     global THINX_UDID
     restore_device_info()
     connect(SSID, PASSWORD)
 
 def main():
-
     print("")
     print ("* THiNX:Client v0.9.3") # compatible with API 1.9.29
-
     while True:
         try:
             thinx()
         except TypeError:
             pass
         time.sleep(TIMEOUT)
-
 if __name__ == '__main__':
     print('THiNX: Register device.')
     main()
