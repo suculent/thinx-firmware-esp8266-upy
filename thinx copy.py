@@ -18,6 +18,29 @@ from mqtt import MQTTClient
 import machine
 import time
 
+SSID = "THiNX-IoT" # THINX_ENV_SSID
+PASSWORD = "<enter-your-ssid-password>" # THINX_ENV_PASS
+TIMEOUT = 180
+
+mqtt_client = None
+mqtt_connected = False
+available_update_url = None
+
+thx_connected_response = '{ "status" : "connected" }'
+thx_disconnected_response = '{ "status" : "disconnected" }'
+thx_reboot_response = '{ "status" : "rebooting" }'
+thx_update_question = '{ title: "Update Available", body: "There is an update available for this device. Do you want to install it now?", type: "actionable", response_type: "bool" }"'
+thx_update_success = '{ title: "Update Successful", body: "The device has been successfully updated.", type: "success" }'
+
+# CONNECTION
+KEEPALIVE = 120
+CLEANSESSION = False # set falst to keep retained messages
+MQTT_LWT_QOS = 0
+MQTT_LWT_RETAIN = 1
+MQTT_QOS = 0
+MQTT_RETAIN = 1
+MQTT_DEVICE_QOS = 2 # do not loose anything, require confirmation... (may not be supported)
+
 try:
     settings = ujson.loads('thinx.json')
     THINX_COMMIT_ID                 = settings['THINX_COMMIT_ID']
@@ -42,21 +65,6 @@ except Exception:
     if THINX_ENV_PASS==None:
         print("THiNX: THINX_ENV_SSID and THINX_ENV_PASS must be set for headless devices without captive portal / AP mode!")
 
-# Required parameters without captive portal
-SSID = THINX_ENV_SSID
-PASSWORD = THINX_ENV_PASS
-TIMEOUT = 180
-
-mqtt_client = None
-mqtt_connected = False
-available_update_url = None
-
-thx_connected_response = '{ "status" : "connected" }'
-thx_disconnected_response = '{ "status" : "disconnected" }'
-thx_reboot_response = '{ "status" : "rebooting" }'
-thx_update_question = '{ title: "Update Available", body: "There is an update available for this device. Do you want to install it now?", type: "actionable", response_type: "bool" }"'
-thx_update_success = '{ title: "Update Successful", body: "The device has been successfully updated.", type: "success" }'
-
 def registration_json_body():
     return '{"registration": {"mac": "' + thinx_device_mac() + '", "firmware": "' + THINX_FIRMWARE_VERSION + '", "commit": "' + THINX_COMMIT_ID + '", "version": "' + THINX_FIRMWARE_VERSION_SHORT + '", "commit": "' + THINX_COMMIT_ID + '", "alias": "' + THINX_ALIAS + '", "udid" :"' + THINX_UDID + '", "owner" : "' + THINX_OWNER + '", "platform" : "nodemcu" }}'
 
@@ -70,15 +78,6 @@ def mqtt_device_channel():
 
 def mqtt_status_channel():
     return mqtt_device_channel() + "/status"
-
-# CONNECTION
-KEEPALIVE = 120
-CLEANSESSION = False # set falst to keep retained messages
-MQTT_LWT_QOS = 0
-MQTT_LWT_RETAIN = 1
-MQTT_QOS = 0
-MQTT_RETAIN = 1
-MQTT_DEVICE_QOS = 2 # do not loose anything, require confirmation... (may not be supported)
 
 def connect(ssid, password):
     sta_if = network.WLAN(network.STA_IF)
@@ -553,19 +552,20 @@ def update_and_reboot(payload):
 
 # CORE LOOP
 def thinx():
-    global THINX_UDID
-    restore_device_info()
-    connect(SSID, PASSWORD)
+    print("* THiNX: Initializing...")
+    #global THINX_UDID
+    #restore_device_info()
+    #connect(SSID, PASSWORD)
 
 def main():
     print("")
-    print ("* THiNX:Client v0.9.3") # compatible with API 1.9.29
+    print ("* THiNX:Client v0.9.3")
     while True:
         try:
             thinx()
         except TypeError:
             pass
         time.sleep(TIMEOUT)
-if __name__ == '__main__':
-    print('THiNX: Register device.')
-    main()
+
+def __init__():
+    thinx()

@@ -1,0 +1,2 @@
+import thinx
+thinx.main()
