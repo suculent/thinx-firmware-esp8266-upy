@@ -1,5 +1,7 @@
 micropython:
   platform: esp8266
+  build:
+    type: firmware
   modules:
     - _boot.py
     - apa102.py
